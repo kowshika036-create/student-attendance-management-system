@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Attendance Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased min-h-screen">
+
+  <!-- LOGIN PAGE -->
+  <div id="loginPage" class="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full">
+      <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Attendance Portal Login</h2>
+      <div id="loginError" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded"></div>
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">Username</label>
+          <input type="text" id="username" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required placeholder="admin">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">Password</label>
+          <input type="password" id="password" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required placeholder="admin123">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="app" class="hidden flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col fixed h-full">
+      <div class="p-5 text-xl font-bold border-b border-slate-800 text-center tracking-wide text-blue-400">AMS Portal</div>
+      <nav class="flex-1 p-4 space-y-2">
+        <button onclick="navigate('dashboard')" class="w-full text-left px-4 py-2.5 rounded hover:bg-slate-800 transition">Dashboard</button>
+        <button onclick="navigate('students')" class="w-full text-left px-4 py-2.5 rounded hover:bg-slate-800 transition">Students</button>
+        <button onclick="navigate('subjects')" class="w-full text-left px-4 py-2.5 rounded hover:bg-slate-800 transition">Subjects</button>
+        <button onclick="navigate('attendance')" class="w-full text-left px-4 py-2.5 rounded hover:bg-slate-800 transition">Mark Attendance</button>
+        <button onclick="navigate('reports')" class="w-full text-left px-4 py-2.5 rounded hover:bg-slate-800 transition">Reports</button>
+      </nav>
+      <div class="p-4 border-t border-slate-800">
+        <button onclick="logout()" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded font-semibold transition">Logout</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-64 flex-1 p-8">
+      
+      <!-- DASHBOARD VIEW -->
+      <section id="view-dashboard" class="view space-y-6">
+        <h1 class="text-2xl font-bold text-slate-800">Dashboard</h1>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div class="bg-white p-5 rounded-lg border-l-4 border-blue-500 shadow-sm">
+            <p class="text-sm text-gray-500 font-semibold">TOTAL STUDENTS</p>
+            <p id="dash-total" class="text-3xl font-bold text-gray-800 mt-2">0</p>
+          </div>
+          <div class="bg-white p-5 rounded-lg border-l-4 border-green-500 shadow-sm">
+            <p class="text-sm text-gray-500 font-semibold">PRESENT TODAY</p>
+            <p id="dash-present" class="text-3xl font-bold text-gray-800 mt-2">0</p>
+          </div>
+          <div class="bg-white p-5 rounded-lg border-l-4 border-red-500 shadow-sm">
+            <p class="text-sm text-gray-500 font-semibold">ABSENT TODAY</p>
+            <p id="dash-absent" class="text-3xl font-bold text-gray-800 mt-2">0</p>
+          </div>
+          <div class="bg-white p-5 rounded-lg border-l-4 border-amber-500 shadow-sm">
+            <p class="text-sm text-gray-500 font-semibold">TODAY'S RATE</p>
+            <p id="dash-pct" class="text-3xl font-bold text-gray-800 mt-2">0%</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <h2 class="text-lg font-bold mb-4">Recent Attendance Activity</h2>
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b text-gray-600 bg-gray-50"><th class="p-3">Date</th><th class="p-3">Name</th><th class="p-3">Roll No</th><th class="p-3">Subject</th><th class="p-3">Status</th></tr>
+            </thead>
+            <tbody id="dash-recent-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- STUDENTS VIEW -->
+      <section id="view-students" class="view hidden space-y-6">
+        <div class="flex justify-between items-center">
+          <h1 class="text-2xl font-bold text-slate-800">Student Directory</h1>
+        </div>
+        
+        <form onsubmit="addStudent(event)" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input type="text" id="st-name" placeholder="Full Name *" required class="border p-2 rounded">
+          <input type="text" id="st-roll" placeholder="Roll Number *" required class="border p-2 rounded">
+          <input type="text" id="st-dept" placeholder="Department *" required class="border p-2 rounded">
+          <input type="text" id="st-class" placeholder="Class/Section (e.g. CS-A) *" required class="border p-2 rounded">
+          <input type="email" id="st-email" placeholder="Email" class="border p-2 rounded">
+          <input type="text" id="st-phone" placeholder="Phone" class="border p-2 rounded">
+          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded md:col-span-3">Add Student</button>
+        </form>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
+          <input type="text" id="st-search" onkeyup="loadStudents()" placeholder="Search students..." class="w-full border p-2 rounded">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b bg-gray-50"><th class="p-3">Roll No</th><th class="p-3">Name</th><th class="p-3">Dept</th><th class="p-3">Class</th><th class="p-3">Actions</th></tr>
+            </thead>
+            <tbody id="students-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SUBJECTS VIEW -->
+      <section id="view-subjects" class="view hidden space-y-6">
+        <h1 class="text-2xl font-bold text-slate-800">Subjects</h1>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <form onsubmit="addSubject(event)" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
+            <h2 class="text-lg font-bold">Add Subject</h2>
+            <input type="text" id="sub-name" placeholder="Subject Name *" required class="w-full border p-2 rounded">
+            <input type="text" id="sub-code" placeholder="Subject Code *" required class="w-full border p-2 rounded">
+            <input type="text" id="sub-dept" placeholder="Department *" required class="w-full border p-2 rounded">
+            <input type="number" id="sub-sem" placeholder="Semester *" required min="1" max="8" class="w-full border p-2 rounded">
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded">Save Subject</button>
+          </form>
+
+          <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b bg-gray-50"><th class="p-3">Code</th><th class="p-3">Name</th><th class="p-3">Dept</th><th class="p-3">Sem</th><th class="p-3">Action</th></tr>
+              </thead>
+              <tbody id="subjects-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ATTENDANCE VIEW -->
+      <section id="view-attendance" class="view hidden space-y-6">
+        <h1 class="text-2xl font-bold text-slate-800">Mark Attendance</h1>
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Date</label>
+            <input type="date" id="att-date" class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Class</label>
+            <select id="att-class" class="w-full border p-2 rounded"><option value="">-- Choose Class --</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Subject</label>
+            <select id="att-subject" class="w-full border p-2 rounded"><option value="">-- Choose Subject --</option></select>
+          </div>
+          <button onclick="loadAttendanceRoster()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded md:col-span-3">Load Roster</button>
+        </div>
+
+        <div id="att-roster-container" class="hidden bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <table class="w-full text-left border-collapse mb-4">
+            <thead>
+              <tr class="border-b bg-gray-50"><th class="p-3">Roll Number</th><th class="p-3">Student Name</th><th class="p-3">Status</th></tr>
+            </thead>
+            <tbody id="att-roster-table"></tbody>
+          </table>
+          <button onclick="submitAttendance()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded">Save Attendance</button>
+        </div>
+      </section>
+
+      <!-- REPORTS VIEW -->
+      <section id="view-reports" class="view hidden space-y-6">
+        <h1 class="text-2xl font-bold text-slate-800">Attendance Reports</h1>
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b bg-gray-50">
+                <th class="p-3">Roll No</th><th class="p-3">Name</th><th class="p-3">Class</th><th class="p-3">Total</th><th class="p-3">Present</th><th class="p-3">Absent</th><th class="p-3">Percentage</th><th class="p-3">Warning</th>
+              </tr>
+            </thead>
+            <tbody id="reports-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    const API_URL = '/api';
+    let token = localStorage.getItem('token');
+
+    // Startup Init
+    if (token) showApp();
+
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+      const config = { method, headers };
+      if (body) config.body = JSON.stringify(body);
+      const res = await fetch(`${API_URL}${endpoint}`, config);
+      if (res.status === 401 || res.status === 403) logout();
+      return res.json();
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        token = data.token;
+        localStorage.setItem('token', token);
+        showApp();
+      } else {
+        const errDiv = document.getElementById('loginError');
+        errDiv.innerText = data.error;
+        errDiv.classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      token = null;
+      document.getElementById('loginPage').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+    }
+
+    function showApp() {
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      document.getElementById('att-date').value = new Date().toISOString().split('T')[0];
+      navigate('dashboard');
+    }
+
+    function navigate(viewName) {
+      document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+
+      if (viewName === 'dashboard') loadDashboard();
+      if (viewName === 'students') loadStudents();
+      if (viewName === 'subjects') loadSubjects();
+      if (viewName === 'attendance') loadAttendanceDropdowns();
+      if (viewName === 'reports') loadReports();
+    }
+
+    // Dashboard Actions
+    async function loadDashboard() {
+      const data = await apiCall('/dashboard');
+      document.getElementById('dash-total').innerText = data.totalStudents;
+      document.getElementById('dash-present').innerText = data.presentToday;
+      document.getElementById('dash-absent').innerText = data.absentToday;
+      document.getElementById('dash-pct').innerText = `${data.attendancePct}%`;
+
+      const tbody = document.getElementById('dash-recent-table');
+      tbody.innerHTML = data.recentRecords.map(r => `
+        <tr class="border-b">
+          <td class="p-3">${r.attendance_date}</td>
+          <td class="p-3 font-medium">${r.student_name}</td>
+          <td class="p-3">${r.roll_number}</td>
+          <td class="p-3">${r.subject_name}</td>
+          <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${r.status === 'Present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${r.status}</span></td>
+        </tr>
+      `).join('') || `<tr><td colspan="5" class="p-3 text-gray-500">No activity logged today.</td></tr>`;
+    }
+
+    // Student Actions
+    async function loadStudents() {
+      const q = document.getElementById('st-search').value;
+      const data = await apiCall(`/students?search=${encodeURIComponent(q)}`);
+      document.getElementById('students-table').innerHTML = data.map(s => `
+        <tr class="border-b">
+          <td class="p-3 font-semibold">${s.roll_number}</td>
+          <td class="p-3">${s.name}</td>
+          <td class="p-3">${s.department}</td>
+          <td class="p-3">${s.class_name}</td>
+          <td class="p-3"><button onclick="deleteStudent(${s.id})" class="text-red-600 hover:underline">Delete</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function addStudent(e) {
+      e.preventDefault();
+      await apiCall('/students', 'POST', {
+        name: document.getElementById('st-name').value,
+        roll_number: document.getElementById('st-roll').value,
+        department: document.getElementById('st-dept').value,
+        class_name: document.getElementById('st-class').value,
+        email: document.getElementById('st-email').value,
+        phone: document.getElementById('st-phone').value
+      });
+      e.target.reset();
+      loadStudents();
+    }
+
+    async function deleteStudent(id) {
+      if (confirm('Delete student record?')) {
+        await apiCall(`/students/${id}`, 'DELETE');
+        loadStudents();
+      }
+    }
+
+    // Subject Actions
+    async function loadSubjects() {
+      const data = await apiCall('/subjects');
+      document.getElementById('subjects-table').innerHTML = data.map(s => `
+        <tr class="border-b">
+          <td class="p-3 font-semibold">${s.subject_code}</td>
+          <td class="p-3">${s.subject_name}</td>
+          <td class="p-3">${s.department}</td>
+          <td class="p-3">${s.semester}</td>
+          <td class="p-3"><button onclick="deleteSubject(${s.id})" class="text-red-600 hover:underline">Delete</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function addSubject(e) {
+      e.preventDefault();
+      await apiCall('/subjects', 'POST', {
+        subject_name: document.getElementById('sub-name').value,
+        subject_code: document.getElementById('sub-code').value,
+        department: document.getElementById('sub-dept').value,
+        semester: document.getElementById('sub-sem').value
+      });
+      e.target.reset();
+      loadSubjects();
+    }
+
+    async function deleteSubject(id) {
+      if (confirm('Delete subject?')) {
+        await apiCall(`/subjects/${id}`, 'DELETE');
+        loadSubjects();
+      }
+    }
+
+    // Attendance Actions
+    async function loadAttendanceDropdowns() {
+      const classes = await apiCall('/attendance/classes');
+      const subjects = await apiCall('/subjects');
+
+      document.getElementById('att-class').innerHTML = '<option value="">-- Choose Class --</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+      document.getElementById('att-subject').innerHTML = '<option value="">-- Choose Subject --</option>' + subjects.map(s => `<option value="${s.id}">${s.subject_name} (${s.subject_code})</option>`).join('');
+    }
+
+    async function loadAttendanceRoster() {
+      const className = document.getElementById('att-class').value;
+      if (!className) return alert('Select a class.');
+
+      const students = await apiCall(`/attendance/students?class_name=${encodeURIComponent(className)}`);
+      const container = document.getElementById('att-roster-container');
+      const tbody = document.getElementById('att-roster-table');
+
+      tbody.innerHTML = students.map(s => `
+        <tr class="border-b">
+          <td class="p-3 font-semibold">${s.roll_number}</td>
+          <td class="p-3">${s.name}</td>
+          <td class="p-3 flex space-x-4">
+            <label class="cursor-pointer"><input type="radio" name="st-${s.id}" value="Present" checked> Present</label>
+            <label class="cursor-pointer"><input type="radio" name="st-${s.id}" value="Absent"> Absent</label>
+          </td>
+        </tr>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    async function submitAttendance() {
+      const date = document.getElementById('att-date').value;
+      const subjectId = document.getElementById('att-subject').value;
+      if (!subjectId) return alert('Select a subject.');
+
+      const rows = document.querySelectorAll('#att-roster-table tr');
+      const records = [];
+
+      rows.forEach(r => {
+        const radio = r.querySelector('input[type="radio"]:checked');
+        if (radio) {
+          const studentId = radio.name.replace('st-', '');
+          records.push({ student_id: studentId, status: radio.value });
+        }
+      });
+
+      const res = await apiCall('/attendance', 'POST', { attendance_date: date, subject_id: subjectId, records });
+      alert(res.message || 'Attendance processed.');
+    }
+
+    // Report Actions
+    async function loadReports() {
+      const data = await apiCall('/reports');
+      document.getElementById('reports-table').innerHTML = data.map(r => `
+        <tr class="border-b ${r.isLow ? 'bg-red-50' : ''}">
+          <td class="p-3 font-semibold">${r.roll_number}</td>
+          <td class="p-3">${r.name}</td>
+          <td class="p-3">${r.class_name}</td>
+          <td class="p-3">${r.total_classes}</td>
+          <td class="p-3 text-green-700 font-bold">${r.present_count}</td>
+          <td class="p-3 text-red-700 font-bold">${r.absent_count}</td>
+          <td class="p-3 font-bold">${r.percentage}%</td>
+          <td class="p-3">${r.isLow ? '<span class="text-xs font-bold bg-red-200 text-red-800 px-2 py-1 rounded">⚠ Low Attendance (&lt;75%)</span>' : '<span class="text-xs font-bold text-green-700">Good</span>'}</td>
+        </tr>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
