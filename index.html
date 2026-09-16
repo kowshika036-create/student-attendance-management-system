@@ -197,22 +197,31 @@
 
     async function handleLogin(e) {
       e.preventDefault();
-      const res = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: document.getElementById('username').value,
-          password: document.getElementById('password').value
-        })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        token = data.token;
-        localStorage.setItem('token', token);
-        showApp();
-      } else {
-        const errDiv = document.getElementById('loginError');
-        errDiv.innerText = data.error;
+      const errDiv = document.getElementById('loginError');
+      errDiv.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          showApp();
+        } else {
+          errDiv.innerText = data.error || 'Login failed.';
+          errDiv.classList.remove('hidden');
+        }
+      } catch (error) {
+        errDiv.innerText = 'Unable to connect to server. Ensure "node server.js" is running and open http://localhost:3000 in your browser.';
         errDiv.classList.remove('hidden');
       }
     }
