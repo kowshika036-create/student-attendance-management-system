@@ -12,15 +12,14 @@
   <div id="loginPage" class="min-h-screen flex items-center justify-center bg-slate-900 px-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full">
       <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Attendance Portal Login</h2>
-      <div id="loginError" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded"></div>
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
         <div>
           <label class="block text-sm font-semibold text-gray-600 mb-1">Username</label>
-          <input type="text" id="username" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required placeholder="admin">
+          <input type="text" id="username" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required placeholder="admin" value="admin">
         </div>
         <div>
           <label class="block text-sm font-semibold text-gray-600 mb-1">Password</label>
-          <input type="password" id="password" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required placeholder="admin123">
+          <input type="password" id="password" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required placeholder="admin123" value="admin123">
         </div>
         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition">Sign In</button>
       </form>
@@ -180,55 +179,24 @@
   </div>
 
   <script>
-    const API_URL = '/api';
-    let token = localStorage.getItem('token');
+    // Local In-Memory Data Store
+    let students = [
+      { id: 1, name: "Alice Johnson", roll_number: "101", department: "Computer Science", class_name: "CS-A", email: "alice@example.com", phone: "1234567890" },
+      { id: 2, name: "Bob Smith", roll_number: "102", department: "Computer Science", class_name: "CS-A", email: "bob@example.com", phone: "0987654321" }
+    ];
 
-    // Startup Init
-    if (token) showApp();
+    let subjects = [
+      { id: 1, subject_name: "Data Structures", subject_code: "CS201", department: "Computer Science", semester: 3 }
+    ];
 
-    async function apiCall(endpoint, method = 'GET', body = null) {
-      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-      const config = { method, headers };
-      if (body) config.body = JSON.stringify(body);
-      const res = await fetch(`${API_URL}${endpoint}`, config);
-      if (res.status === 401 || res.status === 403) logout();
-      return res.json();
-    }
+    let attendanceRecords = [];
 
-    async function handleLogin(e) {
+    function handleLogin(e) {
       e.preventDefault();
-      const errDiv = document.getElementById('loginError');
-      errDiv.classList.add('hidden');
-
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: document.getElementById('username').value,
-            password: document.getElementById('password').value
-          })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          token = data.token;
-          localStorage.setItem('token', token);
-          showApp();
-        } else {
-          errDiv.innerText = data.error || 'Login failed.';
-          errDiv.classList.remove('hidden');
-        }
-      } catch (error) {
-        errDiv.innerText = 'Unable to connect to server. Ensure "node server.js" is running and open http://localhost:3000 in your browser.';
-        errDiv.classList.remove('hidden');
-      }
+      showApp();
     }
 
     function logout() {
-      localStorage.removeItem('token');
-      token = null;
       document.getElementById('loginPage').classList.remove('hidden');
       document.getElementById('app').classList.add('hidden');
     }
@@ -252,30 +220,43 @@
     }
 
     // Dashboard Actions
-    async function loadDashboard() {
-      const data = await apiCall('/dashboard');
-      document.getElementById('dash-total').innerText = data.totalStudents;
-      document.getElementById('dash-present').innerText = data.presentToday;
-      document.getElementById('dash-absent').innerText = data.absentToday;
-      document.getElementById('dash-pct').innerText = `${data.attendancePct}%`;
+    function loadDashboard() {
+      const today = new Date().toISOString().split('T')[0];
+      const todayRecords = attendanceRecords.filter(r => r.attendance_date === today);
+
+      const totalStudents = students.length;
+      const presentToday = todayRecords.filter(r => r.status === 'Present').length;
+      const absentToday = todayRecords.filter(r => r.status === 'Absent').length;
+      const totalMarked = presentToday + absentToday;
+      const pct = totalMarked > 0 ? Math.round((presentToday / totalMarked) * 100) : 0;
+
+      document.getElementById('dash-total').innerText = totalStudents;
+      document.getElementById('dash-present').innerText = presentToday;
+      document.getElementById('dash-absent').innerText = absentToday;
+      document.getElementById('dash-pct').innerText = `${pct}%`;
 
       const tbody = document.getElementById('dash-recent-table');
-      tbody.innerHTML = data.recentRecords.map(r => `
-        <tr class="border-b">
-          <td class="p-3">${r.attendance_date}</td>
-          <td class="p-3 font-medium">${r.student_name}</td>
-          <td class="p-3">${r.roll_number}</td>
-          <td class="p-3">${r.subject_name}</td>
-          <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${r.status === 'Present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${r.status}</span></td>
-        </tr>
-      `).join('') || `<tr><td colspan="5" class="p-3 text-gray-500">No activity logged today.</td></tr>`;
+      tbody.innerHTML = attendanceRecords.slice(-5).reverse().map(r => {
+        const student = students.find(s => s.id == r.student_id) || {};
+        const subject = subjects.find(s => s.id == r.subject_id) || {};
+        return `
+          <tr class="border-b">
+            <td class="p-3">${r.attendance_date}</td>
+            <td class="p-3 font-medium">${student.name || 'Unknown'}</td>
+            <td class="p-3">${student.roll_number || 'N/A'}</td>
+            <td class="p-3">${subject.subject_name || 'N/A'}</td>
+            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${r.status === 'Present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${r.status}</span></td>
+          </tr>
+        `;
+      }).join('') || `<tr><td colspan="5" class="p-3 text-gray-500">No activity logged today.</td></tr>`;
     }
 
     // Student Actions
-    async function loadStudents() {
-      const q = document.getElementById('st-search').value;
-      const data = await apiCall(`/students?search=${encodeURIComponent(q)}`);
-      document.getElementById('students-table').innerHTML = data.map(s => `
+    function loadStudents() {
+      const q = document.getElementById('st-search').value.toLowerCase();
+      const filtered = students.filter(s => s.name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q));
+      
+      document.getElementById('students-table').innerHTML = filtered.map(s => `
         <tr class="border-b">
           <td class="p-3 font-semibold">${s.roll_number}</td>
           <td class="p-3">${s.name}</td>
@@ -286,31 +267,32 @@
       `).join('');
     }
 
-    async function addStudent(e) {
+    function addStudent(e) {
       e.preventDefault();
-      await apiCall('/students', 'POST', {
+      const newStudent = {
+        id: Date.now(),
         name: document.getElementById('st-name').value,
         roll_number: document.getElementById('st-roll').value,
         department: document.getElementById('st-dept').value,
         class_name: document.getElementById('st-class').value,
         email: document.getElementById('st-email').value,
         phone: document.getElementById('st-phone').value
-      });
+      };
+      students.push(newStudent);
       e.target.reset();
       loadStudents();
     }
 
-    async function deleteStudent(id) {
+    function deleteStudent(id) {
       if (confirm('Delete student record?')) {
-        await apiCall(`/students/${id}`, 'DELETE');
+        students = students.filter(s => s.id !== id);
         loadStudents();
       }
     }
 
     // Subject Actions
-    async function loadSubjects() {
-      const data = await apiCall('/subjects');
-      document.getElementById('subjects-table').innerHTML = data.map(s => `
+    function loadSubjects() {
+      document.getElementById('subjects-table').innerHTML = subjects.map(s => `
         <tr class="border-b">
           <td class="p-3 font-semibold">${s.subject_code}</td>
           <td class="p-3">${s.subject_name}</td>
@@ -321,43 +303,44 @@
       `).join('');
     }
 
-    async function addSubject(e) {
+    function addSubject(e) {
       e.preventDefault();
-      await apiCall('/subjects', 'POST', {
+      const newSub = {
+        id: Date.now(),
         subject_name: document.getElementById('sub-name').value,
         subject_code: document.getElementById('sub-code').value,
         department: document.getElementById('sub-dept').value,
         semester: document.getElementById('sub-sem').value
-      });
+      };
+      subjects.push(newSub);
       e.target.reset();
       loadSubjects();
     }
 
-    async function deleteSubject(id) {
+    function deleteSubject(id) {
       if (confirm('Delete subject?')) {
-        await apiCall(`/subjects/${id}`, 'DELETE');
+        subjects = subjects.filter(s => s.id !== id);
         loadSubjects();
       }
     }
 
     // Attendance Actions
-    async function loadAttendanceDropdowns() {
-      const classes = await apiCall('/attendance/classes');
-      const subjects = await apiCall('/subjects');
+    function loadAttendanceDropdowns() {
+      const classes = [...new Set(students.map(s => s.class_name))];
 
       document.getElementById('att-class').innerHTML = '<option value="">-- Choose Class --</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
       document.getElementById('att-subject').innerHTML = '<option value="">-- Choose Subject --</option>' + subjects.map(s => `<option value="${s.id}">${s.subject_name} (${s.subject_code})</option>`).join('');
     }
 
-    async function loadAttendanceRoster() {
+    function loadAttendanceRoster() {
       const className = document.getElementById('att-class').value;
       if (!className) return alert('Select a class.');
 
-      const students = await apiCall(`/attendance/students?class_name=${encodeURIComponent(className)}`);
+      const classStudents = students.filter(s => s.class_name === className);
       const container = document.getElementById('att-roster-container');
       const tbody = document.getElementById('att-roster-table');
 
-      tbody.innerHTML = students.map(s => `
+      tbody.innerHTML = classStudents.map(s => `
         <tr class="border-b">
           <td class="p-3 font-semibold">${s.roll_number}</td>
           <td class="p-3">${s.name}</td>
@@ -370,30 +353,42 @@
       container.classList.remove('hidden');
     }
 
-    async function submitAttendance() {
+    function submitAttendance() {
       const date = document.getElementById('att-date').value;
       const subjectId = document.getElementById('att-subject').value;
       if (!subjectId) return alert('Select a subject.');
 
       const rows = document.querySelectorAll('#att-roster-table tr');
-      const records = [];
-
       rows.forEach(r => {
         const radio = r.querySelector('input[type="radio"]:checked');
         if (radio) {
           const studentId = radio.name.replace('st-', '');
-          records.push({ student_id: studentId, status: radio.value });
+          attendanceRecords.push({
+            attendance_date: date,
+            subject_id: subjectId,
+            student_id: studentId,
+            status: radio.value
+          });
         }
       });
 
-      const res = await apiCall('/attendance', 'POST', { attendance_date: date, subject_id: subjectId, records });
-      alert(res.message || 'Attendance processed.');
+      alert('Attendance processed successfully.');
     }
 
     // Report Actions
-    async function loadReports() {
-      const data = await apiCall('/reports');
-      document.getElementById('reports-table').innerHTML = data.map(r => `
+    function loadReports() {
+      const reportData = students.map(s => {
+        const sRecords = attendanceRecords.filter(r => r.student_id == s.id);
+        const total = sRecords.length;
+        const present = sRecords.filter(r => r.status === 'Present').length;
+        const absent = sRecords.filter(r => r.status === 'Absent').length;
+        const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+        const isLow = total > 0 && pct < 75;
+
+        return { ...s, total_classes: total, present_count: present, absent_count: absent, percentage: pct, isLow };
+      });
+
+      document.getElementById('reports-table').innerHTML = reportData.map(r => `
         <tr class="border-b ${r.isLow ? 'bg-red-50' : ''}">
           <td class="p-3 font-semibold">${r.roll_number}</td>
           <td class="p-3">${r.name}</td>
